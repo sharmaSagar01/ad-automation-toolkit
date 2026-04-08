@@ -55,6 +55,21 @@ ad-automation-toolkit/
 ├── docs/
 │   └── runbook.md                  # Usage guide for each script ⏳
 │
+├── images
+│   ├──Script_New-UserOnboard/
+│   │  ├── script1-image1.png
+│   │  ├── ...
+│   │
+│   ├──Remove-UserOffboard/
+│   │  ├── script2-image1.png
+│   │  ├── ...
+│   │
+│   ├──Import-BulkUsers/
+│   │  ├── script1-image1.png
+│   │  ├── ...
+│   │
+│   ├── ....
+│
 └── README.md
 ```
 
