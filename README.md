@@ -55,7 +55,7 @@ ad-automation-toolkit/
 ├── docs/
 │   └── runbook.md                  # Usage guide for each script ⏳
 │
-├── images
+├── images/                         # Screenshots
 │   ├──Script_New-UserOnboard/
 │   │  ├── script1-image1.png
 │   │  ├── ...
@@ -65,7 +65,7 @@ ad-automation-toolkit/
 │   │  ├── ...
 │   │
 │   ├──Import-BulkUsers/
-│   │  ├── script1-image1.png
+│   │  ├── script3-image1.png
 │   │  ├── ...
 │   │
 │   ├── ....
@@ -208,7 +208,7 @@ Get-ADGroupMember -Identity "All_Staff" | Select Name, SamAccountName
 
 # Confirm OU placement
 Get-ADUser -Identity "jsmith"  | Select DistinguishedName
-Get-ADUser -Identity "mjones"  | Select DistinguishedName
+Get-ADUser -Identity "jmerch"  | Select DistinguishedName
 ```
 
 ### Results
