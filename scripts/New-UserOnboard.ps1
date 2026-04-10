@@ -21,6 +21,8 @@ Import-Module ActiveDirectory
 $Domain = "InfoTech.com"
 $DomainDN = "DC=InfoTech,DC=com"
 $TempPassword =  ConvertTo-SecureString "apple@123" -AsPlainText -Force
+$LogPath  = "C:\Logs\Onboarding"
+$LogFile = "$LogPath\onboard_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 # Map departments to OU and Security Groups
 $DeptMap = @{
@@ -31,6 +33,22 @@ $DeptMap = @{
 
 }
 
+
+
+# ── Create log directory if missing ──────────────────────────────
+
+if(-not (Test-Path $LogPath)){
+    New-Item -ItemType Directory -Path $LogPath | Out-Null
+}
+
+function Write-Log {
+    param([string]$Message, [string]$Level = "INFO")
+    $Entry = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$Level] $Message"
+    Write-Host $Entry -ForegroundColor $(if ($Level -eq "ERROR") { "Red" } elseif ($Level -eq "WARN") { "Yellow" } elseif($Level -eq "DONE") {"Green"} else { "Cyan" })
+
+    Add-Content -Path $LogFile -Value $Entry
+}
+
 # ----------- Build user attributes ------------------------
 
 $Username       = ($FirstName.Substring(0,1) + $LastName).ToLower()  #jsmith
@@ -39,12 +57,13 @@ $UPN            = "$Username@$Domain"  #jsmith@Infotech.com
 $TargetOU       = $DeptMap[$Department].OU
 $TargetGroups   = $DeptMap[$Department].Groups
 
-Write-Host "`n[INFO] Creating user: $DisplayName ($Username)" -ForegroundColor Cyan
+Write-Log "Starting onboarding for : $Username" "DONE"
+# Write-Host "`n[INFO] Creating user: $DisplayName ($Username)" -ForegroundColor Cyan
 
 # --- Check for duplicate username -----------------------
 
 if (Get-ADUser -Filter {SamAccountName -eq $Username} -ErrorAction SilentlyContinue) {
-    Write-Host "[WARN] User '$Username' already exists in AD. Exiting." -ForegroundColor Red
+    Write-Log " User '$Username' already exists in AD. Exiting." "ERROR"
     exit 1
 }
 
@@ -73,11 +92,13 @@ try{
     }
 
     New-ADUser @UserParams
-    Write-Host "[SUCCESS] User Created in OU: $TargetOU" -ForegroundColor Green
+    Write-Log "User Created in OU: $TargetOU" 
+    # Write-Host "[SUCCESS] User Created in OU: $TargetOU" -ForegroundColor Green
 }
 
 catch {
-    Write-Error "[ERROR] Couldn not create user: $_"
+    Write-Log "Could not create user: $_" "ERROR"
+    # Write-Error "[ERROR] Couldn not create user: $_"
     exit 1
 }
 
@@ -87,10 +108,12 @@ catch {
    foreach ($group in $TargetGroups) {
         try {
                 Add-ADGroupMember -Identity $group -Members $Username
-                Write-Host "[OK]   Added to group: $group" -ForegroundColor Green
+                Write-Log "Added to group: $group" 
+                # Write-Host "[OK]   Added to group: $group" -ForegroundColor Green
             }
         catch {
-                Write-Warning "[WARN] Could not add to group '$group': $_"
+                Write-Log "Could not add to group '$group': $_" "WARN"
+                # Write-Warning "[WARN] Could not add to group '$group': $_"
             }
     }
     
@@ -109,16 +132,15 @@ catch {
 
 # ── Summary ───────────────────────────────────────────────────────
 
-Write-Host "`n────────────────────────────────────" -ForegroundColor DarkGray
-Write-Host " Onboarding Complete" -ForegroundColor White
-Write-Host "─────────────────────────────────────" -ForegroundColor DarkGray
-Write-Host " Name       : $DisplayName"
-Write-Host " Username   : $Username"
-Write-Host " UPN        : $UPN"
-Write-Host " Department : $Department"
-Write-Host " Job Title  : $JobTitle"
-Write-Host " OU         : $TargetOU"
-Write-Host " Groups     : $TargetGroups, All_Staff"
-Write-Host ' Temp Pass  : apple@123 (must change at first login)'
-Write-Host "─────────────────────────────────────`n" -ForegroundColor DarkGray
 
+Write-Log "Onboarding complete. Log saved to: $LogFile" "DONE"
+Write-Log " Name       : $DisplayName"
+Write-Log " Username   : $Username"
+Write-Log " UPN        : $UPN"
+Write-Log " Department : $Department"
+Write-Log " Job Title  : $JobTitle"
+Write-Log " OU         : $TargetOU"
+Write-Log " Groups     : $TargetGroups, All_Staff"
+Write-Log " Temp Pass  : apple@123 - must change at first login"
+
+Write-Host "`n[DONE] $Username has been Onboarded. Review log: $LogFile`n" -ForegroundColor Green

@@ -27,7 +27,7 @@ if(-not (Test-Path $LogPath)){
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
     $Entry = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$Level] $Message"
-       Write-Host $Entry -ForegroundColor $(if ($Level -eq "ERROR") { "Red" } elseif ($Level -eq "WARN") { "Yellow" } else { "Cyan" })
+    Write-Host $Entry -ForegroundColor $(if ($Level -eq "ERROR") { "Red" } elseif ($Level -eq "WARN") { "Yellow" } else { "Cyan" })
 
 
     Add-Content -Path $LogFile -Value $Entry
