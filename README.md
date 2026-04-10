@@ -43,8 +43,8 @@ This project builds directly on top of the [Active Directory & Windows Server La
 ad-automation-toolkit/
 │
 ├── scripts/
-│   ├── New-UserOnboard.ps1         # Onboard a new user
-│   ├── Remove-UserOffboard.ps1     # Offboard a departing user  ⏳
+│   ├── New-UserOnboard.ps1         # Onboard a new user         ✅
+│   ├── Remove-UserOffboard.ps1     # Offboard a departing user  ✅
 │   ├── Import-BulkUsers.ps1        # Bulk create users from CSV ⏳
 │   ├── Get-ADHealthCheck.ps1       # Domain health report       ⏳
 │   └── Get-UserAuditReport.ps1     # User audit & expiry report ⏳
@@ -77,9 +77,10 @@ ad-automation-toolkit/
 
 ## 🧩 Scripts
 
-| Script                | Purpose                                                  | Status      |
-| --------------------- | -------------------------------------------------------- | ----------- |
-| `New-UserOnboard.ps1` | Create user, assign OU, add to groups, set temp password | ✅ Complete |
+| Script                    | Purpose                                                            | Status      |
+| ------------------------- | ------------------------------------------------------------------ | ----------- |
+| `New-UserOnboard.ps1`     | Create user, assign OU, add to groups, set temp password           | ✅ Complete |
+| `Remove-UserOffboard.ps1` | Disable account, strip groups, move to Disabled OU, log everything | ✅ Complete |
 
 ---
 
@@ -227,15 +228,131 @@ Get-ADUser -Identity "jmerch"  | Select DistinguishedName
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="images/Script_NewUser_Onboard//script1-image1.png" width="45%" title="Script 1 terminal output — user creation summary" />
-  <img src="images/Script_NewUser_Onboard//script1-image2.png" width="45%" title="Script 1 terminal output — user creation summary" />
+  <img src="images/Script_NewUser_Onboard//script1-image1.png" width="45%" />
+  <img src="images/Script_NewUser_Onboard//script1-image2.png" width="45%"  />
 </p>
  <p align="center">
-  <img src="images/Script_NewUser_Onboard//script1-image3.png" width="45%" title="Script 1 terminal output — user creation summary" />
-  <img src="images/Script_NewUser_Onboard//script1-image4.png" width="45%" title="Script 1 terminal output — user creation summary" />
+  <img src="images/Script_NewUser_Onboard//script1-image3.png" width="45%"  />
+  <img src="images/Script_NewUser_Onboard//script1-image4.png" width="45%"  />
 </p>
 <p align="center">
-  <img src="images/Script_NewUser_Onboard//script1-image5.png" width="45%" title="Script 1 terminal output — user creation summary" />
-  <img src="images/Script_NewUser_Onboard//script1-image6.png" width="45%" title="Script 1 terminal output — user creation summary" />
+  <img src="images/Script_NewUser_Onboard//script1-image5.png" width="45%"  />
+  <img src="images/Script_NewUser_Onboard//script1-image6.png" width="45%"  />
 </p>
 ---
+
+# ✅ Script 2 — `Remove-UserOffboard.ps1`
+
+## 📋 What It Does
+
+Automates the full user offboarding process in Active Directory. When an employee leaves, this script handles everything securely in a single command — no manual steps, no risk of forgetting to revoke access:
+
+- Locates the user account and confirms it exists before doing anything
+- **Disables the account** immediately — the user can no longer log in
+- **Updates the account description** with the offboard date for audit trail purposes
+- **Removes the user from every security and distribution group** they belong to
+- **Creates a `Disabled_Users` OU** automatically if it doesn't already exist
+- **Moves the account** to the `Disabled_Users` OU — keeping it for audit purposes without leaving it active
+- **Logs every action** with timestamps to a file under `C:\Logs\Offboarding\`
+
+> **Why not delete?** Deleting an account immediately is not best practice. Accounts are retained in a disabled state so that mailbox data, file ownership, and audit history are preserved — typically for 30–90 days before permanent deletion.
+
+---
+
+## 🔐 What Happens to the Account
+
+| Action               | Details                                              |
+| -------------------- | ---------------------------------------------------- |
+| Account disabled     | User cannot log in from the moment the script runs   |
+| Description updated  | Set to `OFFBOARDED: YYYY-MM-DD` for audit visibility |
+| All groups removed   | Stripped from every Security and Distribution group  |
+| Moved to disabled OU | `OU=Disabled_Users,DC=InfoTech,DC=com`               |
+| Log file created     | `C:\Logs\Offboarding\offboard_YYYYMMDD_HHmmss.log`   |
+| Account deleted      | ❌ Not deleted — retained for audit purposes         |
+
+---
+
+## 🚀 Usage
+
+```powershell
+# Offboard a user by their SamAccountName
+.\scripts\Remove-UserOffboard.ps1 -Username "jsmith"
+```
+
+### Parameters
+
+| Parameter   | Required | Description                                                |
+| ----------- | :------: | ---------------------------------------------------------- |
+| `-Username` |    ✅    | The SamAccountName of the user to offboard (e.g. `jsmith`) |
+
+---
+
+## 🧪 Test Run
+
+Offboarded a test user to validate the script against the `InfoTech.com` domain. Created a throwaway account first specifically for this test so no real lab users were affected.
+
+### Test Account Used
+
+| Full Name | Username | Department | Reason                                                      |
+| --------- | -------- | ---------- | ----------------------------------------------------------- |
+| Test User | `tuser`  | HR         | Throwaway account created specifically for offboarding test |
+
+### Commands Run
+
+```powershell
+# Step 1 — Create a throwaway account using Script 1
+.\scripts\New-UserOnboard.ps1 `
+    -FirstName "Test" -LastName "User" `
+    -Department "HR" -JobTitle "Tester"
+
+# Step 2 — Confirm the account exists before offboarding
+Get-ADUser -Identity "tuser" -Properties Enabled, MemberOf |
+    Select DisplayName, Enabled, @{N="Groups";E={$_.MemberOf.Count}}
+
+# Step 3 — Run the offboard script
+.\scripts\Remove-UserOffboard.ps1 -Username "tuser"
+
+# Step 4 — Verify account is disabled and moved
+Get-ADUser -Identity "tuser" -Properties Enabled, Description, DistinguishedName |
+    Select DisplayName, Enabled, Description, DistinguishedName
+```
+
+### Results
+
+| Check                                             | Result |
+| -----------------------------------------------   | :----: |
+| Account located in AD                             |   ✅   |
+| Account disabled immediately                      |   ✅   |
+| Description updated with offboard date            |   ✅   |
+| Removed from all security groups                  |   ✅   |
+| Removed from all distribution groups              |   ✅   |
+| Moved to `Disabled_Account` OU                    |   ✅   |
+| `Disabled_Account` OU auto-created (didn't exist) |   ✅   |
+| Log file created at `C:\Logs\Offboarding\`        |   ✅   |
+| Account NOT deleted — retained for audit          |   ✅   |
+
+### Log File Sample
+
+```
+[2026-04-10 09:14:22] [INFO] Starting offboarding for: tuser
+[2026-04-10 09:14:22] [INFO] Found user: Test User | DN: CN=Test User,OU=All_Staff,DC=InfoTech,DC=com
+[2026-04-10 09:14:23] [INFO] Account disabled.
+[2026-04-10 09:14:23] [INFO] Description updated with offboard date.
+[2026-04-10 09:14:23] [INFO] Removed from group: HR
+[2026-04-10 09:14:23] [INFO] Removed from group: All_Staff
+[2026-04-10 09:14:23] [INFO] Removed from group: Personal
+[2026-04-10 09:14:24] [INFO] Created Disabled_Users OU.
+[2026-04-10 09:14:24] [INFO] User moved to Disabled_Users OU.
+[2026-04-10 09:14:24] [INFO] Offboarding complete. Log saved to: C:\Logs\Offboarding\offboard_20260410_091422.log
+```
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="images/Script_Remove_User_Offboard//script2-image1.png" width="45%" />
+  <img src="images/Script_Remove_User_Offboard//script2-image2.png" width="45%" />
+</p>
+ 
+---  
