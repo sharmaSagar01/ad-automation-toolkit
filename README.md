@@ -45,12 +45,12 @@ ad-automation-toolkit/
 ├── scripts/
 │   ├── New-UserOnboard.ps1         # Onboard a new user         ✅
 │   ├── Remove-UserOffboard.ps1     # Offboard a departing user  ✅
-│   ├── Import-BulkUsers.ps1        # Bulk create users from CSV ⏳
+│   ├── Import-BulkUsers.ps1        # Bulk create users from CSV ✅
 │   ├── Get-ADHealthCheck.ps1       # Domain health report       ⏳
 │   └── Get-UserAuditReport.ps1     # User audit & expiry report ⏳
 │
 ├── data/
-│   └── sample-users.csv            # Sample input file for bulk import ⏳
+│   └── sample-users.csv            # Sample input file for bulk import ✅
 │
 ├── docs/
 │   └── runbook.md                  # Usage guide for each script ⏳
@@ -81,6 +81,7 @@ ad-automation-toolkit/
 | ------------------------- | ------------------------------------------------------------------ | ----------- |
 | `New-UserOnboard.ps1`     | Create user, assign OU, add to groups, set temp password           | ✅ Complete |
 | `Remove-UserOffboard.ps1` | Disable account, strip groups, move to Disabled OU, log everything | ✅ Complete |
+| `Import-BulkUsers.ps1`    | Bulk create users from CSV with skip logic and results export      | ✅ Complete |
 
 ---
 

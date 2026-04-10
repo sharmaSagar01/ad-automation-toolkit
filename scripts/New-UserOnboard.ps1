@@ -57,7 +57,7 @@ $UPN            = "$Username@$Domain"  #jsmith@Infotech.com
 $TargetOU       = $DeptMap[$Department].OU
 $TargetGroups   = $DeptMap[$Department].Groups
 
-Write-Log "Starting onboarding for : $Username" "DONE"
+Write-Log "Starting onboarding for : $Username" 
 # Write-Host "`n[INFO] Creating user: $DisplayName ($Username)" -ForegroundColor Cyan
 
 # --- Check for duplicate username -----------------------
@@ -132,8 +132,9 @@ catch {
 
 # ── Summary ───────────────────────────────────────────────────────
 
-
-Write-Log "Onboarding complete. Log saved to: $LogFile" "DONE"
+Write-Log "---------------------------------------------------" 
+Write-Log "Onboarding complete. Log saved to: $LogFile" 
+Write-Log "---------------------------------------------------" 
 Write-Log " Name       : $DisplayName"
 Write-Log " Username   : $Username"
 Write-Log " UPN        : $UPN"
@@ -142,5 +143,6 @@ Write-Log " Job Title  : $JobTitle"
 Write-Log " OU         : $TargetOU"
 Write-Log " Groups     : $TargetGroups, All_Staff"
 Write-Log " Temp Pass  : apple@123 - must change at first login"
+Write-Log "---------------------------------------------------" 
 
 Write-Host "`n[DONE] $Username has been Onboarded. Review log: $LogFile`n" -ForegroundColor Green
