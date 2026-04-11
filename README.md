@@ -357,3 +357,181 @@ Get-ADUser -Identity "tuser" -Properties Enabled, Description, DistinguishedName
 </p>
  
 ---  
+
+ 
+# ✅ Script 3 — `Import-BulkUsers.ps1`
+ 
+## 📋 What It Does
+ 
+Automates mass user provisioning by reading a CSV file and creating multiple AD accounts in a single run. This is how real IT teams handle department-wide onboarding — not one by one through the GUI:
+ 
+- Reads a structured **CSV file** containing new hire details
+- Calls `New-UserOnboard.ps1` for each row — reusing the same onboarding logic already tested in Script 1
+- **Skips duplicates** automatically — if a username already exists in AD, it logs the skip and continues rather than crashing
+- **Tracks every outcome** — created, skipped, or failed — with a reason for each
+- **Exports a results CSV** after the run so you have a full audit record of what happened
+- Prints a clean **console summary** showing total counts at the end
+ 
+> **Why this matters operationally:** When a new department joins or a company acquires another team, you might need to onboard 20, 50, or 100 users at once. Running `New-UserOnboard.ps1` 50 times manually isn't realistic — this script handles it in seconds.
+ 
+---
+ 
+## 📄 CSV Format — `data/sample-users.csv`
+ 
+The input file must follow this exact column structure:
+ 
+```csv
+FirstName,LastName,Department,JobTitle,Manager
+Alice,Johnson,IT,Junior Sysadmin,paula.doe
+Bob,Williams,HR,HR Coordinator,
+Carol,Brown,Finance,Finance Analyst,
+Derek,Taylor,IT,Support Technician,paula.doe
+Eva,Martinez,Operations,Ops Coordinator,
+```
+ 
+| Column | Required | Notes |
+|--------|:--------:|-------|
+| `FirstName` | ✅ | User's first name |
+| `LastName` | ✅ | User's last name |
+| `Department` | ✅ | Must match: `IT`, `HR`, `Finance`, or `Operations` |
+| `JobTitle` | ✅ | User's job title |
+| `Manager` | ❌ | SamAccountName of manager — leave blank if none |
+ 
+> **Username generation:** Same rule as Script 1 — first initial + last name in lowercase. Alice Johnson → `ajohnson`.
+ 
+---
+ 
+## 🚀 Usage
+ 
+```powershell
+# Run bulk import using the sample CSV
+.\scripts\Import-BulkUsers.ps1 -CSVPath ".\data\sample-users.csv"
+ 
+# Run with a custom CSV path
+.\scripts\Import-BulkUsers.ps1 -CSVPath "C:\HR\new-hires-april.csv"
+```
+ 
+### Parameters
+ 
+| Parameter | Required | Description |
+|-----------|:--------:|-------------|
+| `-CSVPath` | ✅ | Full or relative path to the CSV input file |
+ 
+---
+ 
+## 🔄 How It Handles Each Row
+ 
+```
+For each row in the CSV:
+  ├── Check if username already exists in AD
+  │     ├── YES → Log as Skipped, move to next row
+  │     └── NO  → Call New-UserOnboard.ps1 with row data
+  │                   ├── Success → Log as Created
+  │                   └── Error   → Log as Failed with reason
+  │
+  └── After all rows → Export results to CSV + print summary
+```
+ 
+---
+ 
+## 🧪 Test Run
+ 
+Ran the bulk import against the `InfoTech.com` domain using `sample-users.csv` with 5 users. One user (`ajohnson`) was intentionally run twice to test the duplicate skip logic.
+ 
+### CSV Used
+ 
+```csv
+FirstName,LastName,Department,JobTitle,Manager
+Alice,Johnson,IT,Junior Sysadmin,paula.doe
+Bob,Williams,HR,HR Coordinator,
+Carol,Brown,Finance,Finance Analyst,
+Derek,Taylor,IT,Support Technician,paula.doe
+Eva,Martinez,Operations,Ops Coordinator,
+```
+ 
+### Command Run
+ 
+```powershell
+.\scripts\Import-BulkUsers.ps1 -CSVPath ".\data\sample-users.csv"
+```
+ 
+### Console Output
+ 
+```
+[INFO] Starting bulk import — 5 users found in CSV
+ 
+[INFO] Creating user: Alice Johnson (ajohnson)
+[SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
+[OK]   Added to group: IT_Support
+[OK]   Added to group: All_Staff
+[OK]   Added to group: Personal
+ 
+[INFO] Creating user: Bob Williams (bwilliams)
+[SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
+[OK]   Added to group: HR
+[OK]   Added to group: All_Staff
+[OK]   Added to group: Personal
+ 
+[INFO] Creating user: Carol Brown (cbrown)
+[SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
+[OK]   Added to group: Finance
+[OK]   Added to group: All_Staff
+[OK]   Added to group: Personal
+ 
+[INFO] Creating user: Derek Taylor (dtaylor)
+[SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
+[OK]   Added to group: IT_Support
+[OK]   Added to group: All_Staff
+[OK]   Added to group: Personal
+ 
+[INFO] Creating user: Eva Martinez (emartinez)
+[SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
+[OK]   Added to group: Operations
+[OK]   Added to group: All_Staff
+[OK]   Added to group: Personal
+ 
+═══════════════════════════════════════
+ Bulk Import Complete
+═══════════════════════════════════════
+ Created : 5
+ Skipped : 0
+ Failed  : 0
+═══════════════════════════════════════
+ 
+[INFO] Results saved to: .\data\import-results-20260410_091855.csv
+```
+ 
+### Results
+ 
+| Check | Result |
+|-------|:------:|
+| CSV read successfully | ✅ |
+| All 5 users created in AD | ✅ |
+| All users placed in `All_Staff` OU | ✅ |
+| Department security groups assigned correctly | ✅ |
+| `All_Staff` and `Personal` groups assigned to all | ✅ |
+| Managers linked where provided | ✅ |
+| Duplicate skip logic tested — `ajohnson` skipped on re-run | ✅ |
+| Results CSV exported to `data/` folder | ✅ |
+ 
+### Exported Results CSV Sample
+ 
+| Username | Name | Status | Reason |
+|----------|------|--------|--------|
+| ajohnson | Alice Johnson | Created | |
+| bwilliams | Bob Williams | Created | |
+| cbrown | Carol Brown | Created | |
+| dtaylor | Derek Taylor | Created | |
+| emartinez | Eva Martinez | Created | |
+| ajohnson | Alice Johnson | Skipped | Already exists |
+ 
+---
+ 
+## 📸 Screenshots
+ 
+<p align="center">
+  <img src="images/Script_Import_BulkUsers//script3-image1.png" width="45%" />
+  <img src="images/Script_Import_BulkUsers//script3-image2.png" width="45%" />
+</p>
+ 
+---
