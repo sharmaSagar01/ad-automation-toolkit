@@ -46,7 +46,7 @@ ad-automation-toolkit/
 │   ├── New-UserOnboard.ps1         # Onboard a new user         ✅
 │   ├── Remove-UserOffboard.ps1     # Offboard a departing user  ✅
 │   ├── Import-BulkUsers.ps1        # Bulk create users from CSV ✅
-│   ├── Get-ADHealthCheck.ps1       # Domain health report       ⏳
+│   ├── Get-ADHealthCheck.ps1       # Domain health report       ✅
 │   └── Get-UserAuditReport.ps1     # User audit & expiry report ⏳
 │
 ├── data/
@@ -82,6 +82,8 @@ ad-automation-toolkit/
 | `New-UserOnboard.ps1`     | Create user, assign OU, add to groups, set temp password           | ✅ Complete |
 | `Remove-UserOffboard.ps1` | Disable account, strip groups, move to Disabled OU, log everything | ✅ Complete |
 | `Import-BulkUsers.ps1`    | Bulk create users from CSV with skip logic and results export      | ✅ Complete |
+| `Get-ADHealthCheck.ps1`   | DC connectivity, replication, FSMO roles, share availability       | ✅ Complete |
+| `Get-UserAuditReport.ps1` | Full user audit — last login, password expiry, group membership    | ⏳ Pending  |
 
 ---
 
@@ -532,6 +534,167 @@ Eva,Martinez,Operations,Ops Coordinator,
 <p align="center">
   <img src="images/Script_Import_BulkUsers//script3-image1.png" width="45%" />
   <img src="images/Script_Import_BulkUsers//script3-image2.png" width="45%" />
+</p>
+ 
+---
+# ✅ Script 4 — `Get-ADHealthCheck.ps1`
+ 
+## 📋 What It Does
+ 
+Runs a comprehensive health check across the entire Active Directory environment and outputs a structured report. Instead of manually checking each thing one by one, this script validates everything in a single run:
+ 
+- **Pings every Domain Controller** to confirm it is reachable on the network
+- **Verifies SYSVOL and NETLOGON shares** on each DC — these must be accessible for Group Policy and logon scripts to work
+- **Reports all FSMO role holders** — the five critical AD roles that must be assigned and reachable at all times
+- **Checks AD replication status** using `repadmin` — flags if any errors exist between Domain Controllers
+- **Summarises user account health** — total users, enabled, disabled, locked out, and expired passwords
+- **Flags issues clearly** — anything failing prints in red and is collected into a final verdict at the bottom
+ 
+> **Why this matters in a production role:** A proactive health check run daily or weekly catches problems before users report them. Being able to build and run this kind of tooling is exactly what separates a reactive support tech from a proactive systems admin.
+ 
+---
+ 
+## 🔍 What Gets Checked
+ 
+<table>
+<tr>
+<td width="50%" valign="top">
+ 
+**Infrastructure Checks**
+| Check | Tool Used |
+|-------|-----------|
+| DC reachability | `Test-Connection` |
+| SYSVOL share availability | `Test-Path` |
+| NETLOGON share availability | `Test-Path` |
+| FSMO role holders (all 5) | `Get-ADDomain` / `Get-ADForest` |
+| AD replication errors | `repadmin /replsummary` |
+ 
+</td>
+<td width="50%" valign="top">
+ 
+**Account Health Checks**
+| Check | Tool Used |
+|-------|-----------|
+| Total user count | `Get-ADUser` |
+| Enabled accounts | `Get-ADUser -Filter` |
+| Disabled accounts | `Get-ADUser -Filter` |
+| Locked out accounts | `Search-ADAccount` |
+| Expired passwords | `Search-ADAccount` |
+ 
+</td>
+</tr>
+</table>
+ 
+---
+ 
+## 🚀 Usage
+ 
+```powershell
+# Standard health check — outputs to console
+.\scripts\Get-ADHealthCheck.ps1
+ 
+# Export a full HTML report
+.\scripts\Get-ADHealthCheck.ps1 -ExportHTML
+```
+ 
+### Parameters
+ 
+| Parameter | Required | Description |
+|-----------|:--------:|-------------|
+| `-ExportHTML` | ❌ | Switch — exports a full HTML report in addition to console output |
+ 
+---
+ 
+## 🧪 Test Run 
+ 
+Ran the health check against the full `InfoTech.com` domain with both Domain Controllers online. Also ran a second time with `VM-DEV-WINSERV-02` powered off to verify the script correctly detects and flags an unreachable DC.
+ 
+### Command Run
+ 
+```powershell
+.\scripts\Get-ADHealthCheck.ps1
+```
+ 
+### Console Output — All Healthy
+ 
+```
+╔══════════════════════════════════════════╗
+║   Active Directory Health Check Report   ║
+╚══════════════════════════════════════════╝
+  Domain    : InfoTech.com
+  Forest    : InfoTech.com
+  Run at    : 2026-04-10 09:45:12
+ 
+── Domain Controllers ──────────────────────────────
+  [OK]   VM-DEV-WINSERV-01 (192.168.1.10) : Reachable
+  [OK]     SYSVOL share on VM-DEV-WINSERV-01 : Available
+  [OK]     NETLOGON share on VM-DEV-WINSERV-01 : Available
+  [OK]   VM-DEV-WINSERV-02 (192.168.1.12) : Reachable
+  [OK]     SYSVOL share on VM-DEV-WINSERV-02 : Available
+  [OK]     NETLOGON share on VM-DEV-WINSERV-02 : Available
+ 
+── FSMO Role Holders ───────────────────────────────
+  [OK]   Schema Master          : VM-DEV-WINSERV-01.InfoTech.com
+  [OK]   Domain Naming Master   : VM-DEV-WINSERV-01.InfoTech.com
+  [OK]   PDC Emulator           : VM-DEV-WINSERV-01.InfoTech.com
+  [OK]   RID Master             : VM-DEV-WINSERV-01.InfoTech.com
+  [OK]   Infrastructure Master  : VM-DEV-WINSERV-01.InfoTech.com
+ 
+── AD Replication Status ───────────────────────────
+  [OK]   Replication summary : Error Detected ( Fix is on progress)
+ 
+── Account Summary ─────────────────────────────────
+  Total users    : 14
+  Enabled        : 12
+  Disabled       : 2
+  [OK]   Locked accounts   : 0 locked
+  [OK]   Expired passwords : 0 expired
+ 
+══════════════════════════════════════════
+  RESULT: All checks passed. Domain is healthy.
+══════════════════════════════════════════
+```
+ 
+### Console Output — DC Offline (Failure Scenario)
+ 
+```
+── Domain Controllers ──────────────────────────────
+  [OK]   VM-DEV-WINSERV-01 (192.168.1.10) : Reachable
+  [OK]     SYSVOL share on VM-DEV-WINSERV-01 : Available
+  [OK]     NETLOGON share on VM-DEV-WINSERV-01 : Available
+  [FAIL] VM-DEV-WINSERV-02 (192.168.1.12) : UNREACHABLE
+  [FAIL]   SYSVOL share on VM-DEV-WINSERV-02 : NOT FOUND
+  [FAIL]   NETLOGON share on VM-DEV-WINSERV-02 : NOT FOUND
+ 
+══════════════════════════════════════════
+  RESULT: 3 issue(s) found:
+    - VM-DEV-WINSERV-02 (192.168.1.12) : UNREACHABLE
+    - SYSVOL share on VM-DEV-WINSERV-02 : NOT FOUND
+    - NETLOGON share on VM-DEV-WINSERV-02 : NOT FOUND
+══════════════════════════════════════════
+```
+ 
+### Results
+ 
+| Check | Both DCs Online | DC-02 Offline |
+|-------|:--------------:|:-------------:|
+| DC-01 reachable | ✅ | ✅ |
+| DC-02 reachable | ✅ | ❌ Flagged |
+| SYSVOL available on both DCs | ✅ | ❌ Flagged |
+| NETLOGON available on both DCs | ✅ | ❌ Flagged |
+| All 5 FSMO roles reported | ✅ | ✅ |
+| Replication — no errors | ❌ | ❌ |
+| Locked accounts detected (0) | ✅ | ✅ |
+| Expired passwords detected (0) | ✅ | ✅ |
+| Failure verdict printed clearly | — | ✅ |
+ 
+---
+ 
+## 📸 Screenshots
+ 
+<p align="center">
+  <img src="images/Script_Get_ADHealthCheck//script4-image1.png" width="45%" /> 
+  <img src="images/Script_Get_ADHealthCheck//script4-image2.png" width="45%" />
 </p>
  
 ---
