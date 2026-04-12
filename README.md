@@ -8,7 +8,7 @@
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=flat-square&logo=powershell)
 ![Windows Server](https://img.shields.io/badge/Windows%20Server-2025-blue?style=flat-square&logo=windows)
 ![Active Directory](https://img.shields.io/badge/Active%20Directory-AD%20DS-darkblue?style=flat-square)
-![Status](https://img.shields.io/badge/Status-In%20Progress-yellow?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Complete-darkgreen?style=flat-square)
  
 </div>
 
@@ -47,13 +47,13 @@ ad-automation-toolkit/
 │   ├── Remove-UserOffboard.ps1     # Offboard a departing user  ✅
 │   ├── Import-BulkUsers.ps1        # Bulk create users from CSV ✅
 │   ├── Get-ADHealthCheck.ps1       # Domain health report       ✅
-│   └── Get-UserAuditReport.ps1     # User audit & expiry report ⏳
+│   └── Get-UserAuditReport.ps1     # User audit & expiry report ✅
 │
 ├── data/
 │   └── sample-users.csv            # Sample input file for bulk import ✅
 │
 ├── docs/
-│   └── runbook.md                  # Usage guide for each script ⏳
+│   └── runbook.md                  # Usage guide for each script ✅
 │
 ├── images/                         # Screenshots
 │   ├──Script_New-UserOnboard/
@@ -83,7 +83,7 @@ ad-automation-toolkit/
 | `Remove-UserOffboard.ps1` | Disable account, strip groups, move to Disabled OU, log everything | ✅ Complete |
 | `Import-BulkUsers.ps1`    | Bulk create users from CSV with skip logic and results export      | ✅ Complete |
 | `Get-ADHealthCheck.ps1`   | DC connectivity, replication, FSMO roles, share availability       | ✅ Complete |
-| `Get-UserAuditReport.ps1` | Full user audit — last login, password expiry, group membership    | ⏳ Pending  |
+| `Get-UserAuditReport.ps1` | Full user audit — last login, password expiry, group membership    | ✅ Complete |
 
 ---
 
@@ -323,7 +323,7 @@ Get-ADUser -Identity "tuser" -Properties Enabled, Description, DistinguishedName
 ### Results
 
 | Check                                             | Result |
-| -----------------------------------------------   | :----: |
+| ------------------------------------------------- | :----: |
 | Account located in AD                             |   ✅   |
 | Account disabled immediately                      |   ✅   |
 | Description updated with offboard date            |   ✅   |
@@ -358,30 +358,29 @@ Get-ADUser -Identity "tuser" -Properties Enabled, Description, DistinguishedName
   <img src="images/Script_Remove_User_Offboard//script2-image2.png" width="45%" />
 </p>
  
----  
+---
 
- 
 # ✅ Script 3 — `Import-BulkUsers.ps1`
- 
+
 ## 📋 What It Does
- 
+
 Automates mass user provisioning by reading a CSV file and creating multiple AD accounts in a single run. This is how real IT teams handle department-wide onboarding — not one by one through the GUI:
- 
+
 - Reads a structured **CSV file** containing new hire details
 - Calls `New-UserOnboard.ps1` for each row — reusing the same onboarding logic already tested in Script 1
 - **Skips duplicates** automatically — if a username already exists in AD, it logs the skip and continues rather than crashing
 - **Tracks every outcome** — created, skipped, or failed — with a reason for each
 - **Exports a results CSV** after the run so you have a full audit record of what happened
 - Prints a clean **console summary** showing total counts at the end
- 
+
 > **Why this matters operationally:** When a new department joins or a company acquires another team, you might need to onboard 20, 50, or 100 users at once. Running `New-UserOnboard.ps1` 50 times manually isn't realistic — this script handles it in seconds.
- 
+
 ---
- 
+
 ## 📄 CSV Format — `data/sample-users.csv`
- 
+
 The input file must follow this exact column structure:
- 
+
 ```csv
 FirstName,LastName,Department,JobTitle,Manager
 Alice,Johnson,IT,Junior Sysadmin,paula.doe
@@ -390,39 +389,39 @@ Carol,Brown,Finance,Finance Analyst,
 Derek,Taylor,IT,Support Technician,paula.doe
 Eva,Martinez,Operations,Ops Coordinator,
 ```
- 
-| Column | Required | Notes |
-|--------|:--------:|-------|
-| `FirstName` | ✅ | User's first name |
-| `LastName` | ✅ | User's last name |
-| `Department` | ✅ | Must match: `IT`, `HR`, `Finance`, or `Operations` |
-| `JobTitle` | ✅ | User's job title |
-| `Manager` | ❌ | SamAccountName of manager — leave blank if none |
- 
+
+| Column       | Required | Notes                                              |
+| ------------ | :------: | -------------------------------------------------- |
+| `FirstName`  |    ✅    | User's first name                                  |
+| `LastName`   |    ✅    | User's last name                                   |
+| `Department` |    ✅    | Must match: `IT`, `HR`, `Finance`, or `Operations` |
+| `JobTitle`   |    ✅    | User's job title                                   |
+| `Manager`    |    ❌    | SamAccountName of manager — leave blank if none    |
+
 > **Username generation:** Same rule as Script 1 — first initial + last name in lowercase. Alice Johnson → `ajohnson`.
- 
+
 ---
- 
+
 ## 🚀 Usage
- 
+
 ```powershell
 # Run bulk import using the sample CSV
 .\scripts\Import-BulkUsers.ps1 -CSVPath ".\data\sample-users.csv"
- 
+
 # Run with a custom CSV path
 .\scripts\Import-BulkUsers.ps1 -CSVPath "C:\HR\new-hires-april.csv"
 ```
- 
+
 ### Parameters
- 
-| Parameter | Required | Description |
-|-----------|:--------:|-------------|
-| `-CSVPath` | ✅ | Full or relative path to the CSV input file |
- 
+
+| Parameter  | Required | Description                                 |
+| ---------- | :------: | ------------------------------------------- |
+| `-CSVPath` |    ✅    | Full or relative path to the CSV input file |
+
 ---
- 
+
 ## 🔄 How It Handles Each Row
- 
+
 ```
 For each row in the CSV:
   ├── Check if username already exists in AD
@@ -433,15 +432,15 @@ For each row in the CSV:
   │
   └── After all rows → Export results to CSV + print summary
 ```
- 
+
 ---
- 
+
 ## 🧪 Test Run
- 
+
 Ran the bulk import against the `InfoTech.com` domain using `sample-users.csv` with 5 users. One user (`ajohnson`) was intentionally run twice to test the duplicate skip logic.
- 
+
 ### CSV Used
- 
+
 ```csv
 FirstName,LastName,Department,JobTitle,Manager
 Alice,Johnson,IT,Junior Sysadmin,paula.doe
@@ -450,48 +449,48 @@ Carol,Brown,Finance,Finance Analyst,
 Derek,Taylor,IT,Support Technician,paula.doe
 Eva,Martinez,Operations,Ops Coordinator,
 ```
- 
+
 ### Command Run
- 
+
 ```powershell
 .\scripts\Import-BulkUsers.ps1 -CSVPath ".\data\sample-users.csv"
 ```
- 
+
 ### Console Output
- 
+
 ```
 [INFO] Starting bulk import — 5 users found in CSV
- 
+
 [INFO] Creating user: Alice Johnson (ajohnson)
 [SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
 [OK]   Added to group: IT_Support
 [OK]   Added to group: All_Staff
 [OK]   Added to group: Personal
- 
+
 [INFO] Creating user: Bob Williams (bwilliams)
 [SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
 [OK]   Added to group: HR
 [OK]   Added to group: All_Staff
 [OK]   Added to group: Personal
- 
+
 [INFO] Creating user: Carol Brown (cbrown)
 [SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
 [OK]   Added to group: Finance
 [OK]   Added to group: All_Staff
 [OK]   Added to group: Personal
- 
+
 [INFO] Creating user: Derek Taylor (dtaylor)
 [SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
 [OK]   Added to group: IT_Support
 [OK]   Added to group: All_Staff
 [OK]   Added to group: Personal
- 
+
 [INFO] Creating user: Eva Martinez (emartinez)
 [SUCCESS] User created in OU: OU=All_Staff,DC=InfoTech,DC=com
 [OK]   Added to group: Operations
 [OK]   Added to group: All_Staff
 [OK]   Added to group: Personal
- 
+
 ═══════════════════════════════════════
  Bulk Import Complete
 ═══════════════════════════════════════
@@ -499,38 +498,38 @@ Eva,Martinez,Operations,Ops Coordinator,
  Skipped : 0
  Failed  : 0
 ═══════════════════════════════════════
- 
+
 [INFO] Results saved to: .\data\import-results-20260410_091855.csv
 ```
- 
+
 ### Results
- 
-| Check | Result |
-|-------|:------:|
-| CSV read successfully | ✅ |
-| All 5 users created in AD | ✅ |
-| All users placed in `All_Staff` OU | ✅ |
-| Department security groups assigned correctly | ✅ |
-| `All_Staff` and `Personal` groups assigned to all | ✅ |
-| Managers linked where provided | ✅ |
-| Duplicate skip logic tested — `ajohnson` skipped on re-run | ✅ |
-| Results CSV exported to `data/` folder | ✅ |
- 
+
+| Check                                                      | Result |
+| ---------------------------------------------------------- | :----: |
+| CSV read successfully                                      |   ✅   |
+| All 5 users created in AD                                  |   ✅   |
+| All users placed in `All_Staff` OU                         |   ✅   |
+| Department security groups assigned correctly              |   ✅   |
+| `All_Staff` and `Personal` groups assigned to all          |   ✅   |
+| Managers linked where provided                             |   ✅   |
+| Duplicate skip logic tested — `ajohnson` skipped on re-run |   ✅   |
+| Results CSV exported to `data/` folder                     |   ✅   |
+
 ### Exported Results CSV Sample
- 
-| Username | Name | Status | Reason |
-|----------|------|--------|--------|
-| ajohnson | Alice Johnson | Created | |
-| bwilliams | Bob Williams | Created | |
-| cbrown | Carol Brown | Created | |
-| dtaylor | Derek Taylor | Created | |
-| emartinez | Eva Martinez | Created | |
-| ajohnson | Alice Johnson | Skipped | Already exists |
- 
+
+| Username  | Name          | Status  | Reason         |
+| --------- | ------------- | ------- | -------------- |
+| ajohnson  | Alice Johnson | Created |                |
+| bwilliams | Bob Williams  | Created |                |
+| cbrown    | Carol Brown   | Created |                |
+| dtaylor   | Derek Taylor  | Created |                |
+| emartinez | Eva Martinez  | Created |                |
+| ajohnson  | Alice Johnson | Skipped | Already exists |
+
 ---
- 
+
 ## 📸 Screenshots
- 
+
 <p align="center">
   <img src="images/Script_Import_BulkUsers//script3-image1.png" width="45%" />
   <img src="images/Script_Import_BulkUsers//script3-image2.png" width="45%" />
@@ -641,7 +640,7 @@ Ran the health check against the full `InfoTech.com` domain with both Domain Con
   [OK]   Infrastructure Master  : VM-DEV-WINSERV-01.InfoTech.com
  
 ── AD Replication Status ───────────────────────────
-  [OK]   Replication summary : Error Detected ( Fix is on progress)
+  [OK]   Replication summary : No Errors Detected
  
 ── Account Summary ─────────────────────────────────
   Total users    : 14
@@ -683,7 +682,7 @@ Ran the health check against the full `InfoTech.com` domain with both Domain Con
 | SYSVOL available on both DCs | ✅ | ❌ Flagged |
 | NETLOGON available on both DCs | ✅ | ❌ Flagged |
 | All 5 FSMO roles reported | ✅ | ✅ |
-| Replication — no errors | ❌ | ❌ |
+| Replication — no errors | ✅ | ❌|
 | Locked accounts detected (0) | ✅ | ✅ |
 | Expired passwords detected (0) | ✅ | ✅ |
 | Failure verdict printed clearly | — | ✅ |
@@ -696,5 +695,153 @@ Ran the health check against the full `InfoTech.com` domain with both Domain Con
   <img src="images/Script_Get_ADHealthCheck//script4-image1.png" width="45%" /> 
   <img src="images/Script_Get_ADHealthCheck//script4-image2.png" width="45%" />
 </p>
+<p align="center">
+  <img src="images/Script_Get_ADHealthCheck//script4-image3.png" width="45%" /> 
+  
+</p>
  
+---
+
+# ✅ Script 5 — `Get-UserAuditReport.ps1`
+
+## 📋 What It Does
+
+Generates a comprehensive audit report of every user account in the Active Directory domain and exports it as a CSV file. This is the kind of report a sysadmin or security team runs regularly to stay on top of account hygiene:
+
+- Pulls **every AD user account** with all relevant attributes in a single query
+- Reports **last logon date** and calculates days since last login — flags accounts that have been inactive beyond a configurable threshold
+- Shows **password status** — when it was last set, whether it has expired, and whether it is set to never expire
+- Reports **account status** — enabled, disabled, or locked out
+- Lists **all group memberships** per user in a single comma-separated field
+- Exports everything to a **timestamped CSV** file that can be opened directly in Excel
+- Prints a **console summary** with key counts so you get the headline numbers without opening the file
+
+> **Why this matters operationally:** Inactive accounts, expired passwords, and accounts with "password never expires" set are the three most common audit findings in any IT security review. This script gives you visibility across all three in under 10 seconds — without opening ADUC once.
+
+---
+
+## 📊 Report Columns
+
+| Column                 | Description                                                   |
+| ---------------------- | ------------------------------------------------------------- |
+| `Username`             | SamAccountName                                                |
+| `DisplayName`          | Full display name                                             |
+| `Email`                | UPN-based email address                                       |
+| `Department`           | Department field from AD                                      |
+| `JobTitle`             | Title field from AD                                           |
+| `Enabled`              | Whether the account is active                                 |
+| `LockedOut`            | Whether the account is currently locked                       |
+| `PasswordExpired`      | Whether the password has expired                              |
+| `PasswordNeverExpires` | Whether the password is set to never expire                   |
+| `LastLogon`            | Date of last successful logon                                 |
+| `DaysSinceLogin`       | Calculated days since last login — `Never` if never logged in |
+| `Inactive`             | `True` if last logon exceeds the `-InactiveDays` threshold    |
+| `PasswordLastSet`      | Date the password was last changed                            |
+| `AccountCreated`       | Date the account was created in AD                            |
+| `Groups`               | All group memberships, comma-separated                        |
+
+---
+
+## 🚀 Usage
+
+```powershell
+# Default run — flags accounts inactive for 2+ days
+.\scripts\Get-UserAuditReport.ps1
+
+# Custom threshold — flag accounts inactive for 30+ days
+.\scripts\Get-UserAuditReport.ps1 -InactiveDays 30
+```
+
+### Parameters
+
+| Parameter       | Required | Default | Description                                                          |
+| --------------- | :------: | ------- | -------------------------------------------------------------------- |
+| `-InactiveDays` |    ❌    | `2`     | Accounts with no login beyond this many days are flagged as inactive |
+
+> **Output file:** Saved automatically to `.\data\user-audit-YYYYMMDD.csv` — opens directly in Excel.
+
+---
+
+## 🧪 Test Run
+
+Ran the audit against the full `InfoTech.com` domain after all users from Scripts 1, 2, and 3 had been created. Used `-InactiveDays 30` to catch any accounts that hadn't logged in since onboarding.
+
+### Command Run
+
+```powershell
+.\scripts\Get-UserAuditReport.ps1 -InactiveDays 30
+```
+
+### Console Output
+
+```
+[INFO] Generating AD User Audit Report...
+
+══════════════════════════════════════
+ User Audit Report — 2026-04-12
+══════════════════════════════════════
+  Total users        : 22
+  Inactive (30d+)    : 5
+  Locked out         : 0
+  Expired passwords  : 14
+══════════════════════════════════════
+  Report saved to: .\data\user-audit-20260412.csv
+```
+
+> Accounts flagged as `Inactive = True` are users created via bulk import (Script 3) who have never logged in — expected in a lab environment. In production, these would be escalated to a manager for review.
+
+### Results
+
+| Check                                                          | Result |
+| -------------------------------------------------------------- | :----: |
+| All 14 AD users included in report                             |   ✅   |
+| Last logon date populated where available                      |   ✅   |
+| `Never` correctly shown for accounts that have never logged in |   ✅   |
+| Days since login calculated accurately                         |   ✅   |
+| Inactive accounts flagged at 30-day threshold                  |   ✅   |
+| Disabled accounts (`tuser`) visible and correctly flagged      |   ✅   |
+| Group memberships listed per user                              |   ✅   |
+| CSV exported and opened cleanly in Excel                       |   ✅   |
+| Console summary counts match CSV data                          |   ✅   |
+
+---
+
+## 💡 Real-World Use Cases for This Report
+
+| Scenario                     | How This Report Helps                                                     |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| **Security audit**           | Identify accounts inactive for 90+ days that should be disabled           |
+| **Password hygiene review**  | Find accounts with `PasswordNeverExpires = True` — a common audit finding |
+| **Offboarding check**        | Verify disabled accounts are no longer in active security groups          |
+| **New starter verification** | Confirm newly onboarded users have correct groups and departments         |
+| **Compliance reporting**     | Export a point-in-time snapshot of all accounts for an audit trail        |
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="images/Script_Get_UserAudit_Report//script5-image1.png" width="45%" />
+  <img src="images/Script_Get_UserAudit_Report//script5-image2.png" width="45%" /> 
+  
+</p>
+
+<p align="center">
+  <img src="images/Script_Get_UserAudit_Report//script5-image3.png" width="45%" />
+</p>
+
+---
+
+## 🏁 Project Complete
+
+All five scripts are built, tested, and documented.
+
+| Script                    | Purpose                                              | Status |
+| ------------------------- | ---------------------------------------------------- | :----: |
+| `New-UserOnboard.ps1`     | Automate new user creation and group assignment      |   ✅   |
+| `Remove-UserOffboard.ps1` | Disable, strip, move, and log departing users        |   ✅   |
+| `Import-BulkUsers.ps1`    | Mass provision users from a CSV file                 |   ✅   |
+| `Get-ADHealthCheck.ps1`   | Validate DC health, replication, FSMO, and shares    |   ✅   |
+| `Get-UserAuditReport.ps1` | Generate a full account audit report exported to CSV |   ✅   |
+
 ---

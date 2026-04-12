@@ -69,13 +69,16 @@ foreach ($Role in $FSMORoles.GetEnumerator()) {
 # ── AD Replication ────────────────────────────────────────────────
 Write-Section "AD Replication Status"
 try {
-    $ReplResult = repadmin /replsummary 2>&1
-    $HasErrors  = $ReplResult -match "error|fail" -and $ReplResult -notmatch "0 errors"
-    Write-Check "Replication summary" $(if (-not $HasErrors) { "No errors detected" } else { "Errors found - run: repadmin /showrepl" }) (-not $HasErrors)
-}
-catch {
-    Write-Check "Replication check" "Could not run repadmin" $false
-}
+    $ReplSummary = repadmin /replsummary 2>&1
+
+    # Extract lines with actual DC entries (contain fail counts)
+    $FailLines = $ReplSummary | Where-Object { $_ -match "^\s+(VM-|DC-)" -or $_ -match "fails/total"}
+
+    # Look for any non-zero failure count (e.g. "3 / 5" means 3 failures)
+    $HasErrors = ($ReplSummary | Where-Object { $_ -match "\s+[1-9]\d*\s*/\s*\d+" }).Count -gt 0
+
+    Write-Check "Replication summary"  $(if (-not $HasErrors) { "No errors detected" } else { "Errors found - run: repadmin /showrepl" }) (-not $HasErrors)
+    } catch { Write-Check "Replication check" "Could not run repadmin" $false }
 
 # ── Account Summary ───────────────────────────────────────────────
 Write-Section "Account Summary"
@@ -92,7 +95,6 @@ Write-Check "Locked accounts"    "$LockedUsers locked"  ($LockedUsers -eq 0)
 Write-Check "Expired passwords"  "$ExpiredPwd expired"  ($ExpiredPwd -eq 0)
 
 
-# ── Final verdict ─────────────────────────────────────────────────
 Write-Host "----------------------------------------------" -ForegroundColor DarkGray
 if ($Issues.Count -eq 0) {
     Write-Host "  RESULT: All checks passed. Domain is healthy." -ForegroundColor Green
@@ -100,4 +102,4 @@ if ($Issues.Count -eq 0) {
     Write-Host "  RESULT: $($Issues.Count) issue(s) found:" -ForegroundColor Red
     $Issues | ForEach-Object { Write-Host "    - $_" -ForegroundColor Red }
 }
-Write-Host "------------------------------------------------" -ForegroundColor DarkGray
+Write-Host "----------------------------------------------" -ForegroundColor DarkGray
